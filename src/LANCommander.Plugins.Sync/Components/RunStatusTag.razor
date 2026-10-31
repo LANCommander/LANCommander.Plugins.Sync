@@ -1,0 +1,22 @@
+@* How a sync run ended, or that it's still going *@
+<Tag Success="Status == SyncRunStatus.Succeeded"
+     Warning="Status is SyncRunStatus.CompletedWithErrors or SyncRunStatus.Cancelled"
+     Danger="Status == SyncRunStatus.Failed"
+     Info="Status == SyncRunStatus.Running"
+     title="@Error">@Label</Tag>
+
+@code {
+    [Parameter, EditorRequired] public SyncRunStatus Status { get; set; }
+
+    [Parameter] public string? Error { get; set; }
+
+    string Label => Status switch
+    {
+        SyncRunStatus.Running => "Running",
+        SyncRunStatus.Succeeded => "Succeeded",
+        SyncRunStatus.CompletedWithErrors => "Completed with errors",
+        SyncRunStatus.Failed => "Failed",
+        SyncRunStatus.Cancelled => "Cancelled",
+        _ => Status.ToString(),
+    };
+}

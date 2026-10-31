@@ -1,0 +1,36 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!--
+      The LANCommander server the plugin is built for. Its packages are released together under the
+      server's version. The plugin needs IPackageExporter, which first ships in 2.2.0-beta.1.
+      To build against an unreleased server, pack its SDK, Server.Plugins and Server.UI projects into
+      artifacts/packages and pass -p:LANCommanderVersion=<version>; see the README.
+    -->
+    <LANCommanderVersion Condition="'$(LANCommanderVersion)' == ''">2.2.0-beta.1</LANCommanderVersion>
+  </PropertyGroup>
+  <ItemGroup Label="Host">
+    <PackageVersion Include="LANCommander.SDK" Version="$(LANCommanderVersion)" />
+    <PackageVersion Include="LANCommander.Server.Plugins" Version="$(LANCommanderVersion)" />
+    <PackageVersion Include="LANCommander.Server.UI" Version="$(LANCommanderVersion)" />
+  </ItemGroup>
+  <!--
+    The server shares its EF Core and database providers with plugins, so the migrations projects
+    build against the versions it pins.
+  -->
+  <ItemGroup Label="Data">
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.19" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.19" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="bunit" Version="2.9.0" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.1" />
+  </ItemGroup>
+</Project>

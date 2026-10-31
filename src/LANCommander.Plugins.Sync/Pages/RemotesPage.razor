@@ -1,0 +1,188 @@
+@page "/Plugins/Sync"
+@inherits SyncPageBase
+@inject RemoteServers Remotes
+@inject SyncHistory History
+@inject SyncJobs Jobs
+@inject NotificationService Notifications
+
+<PageHeader Title="Server Sync" Subtitle="The LANCommander servers this one brings games, redistributables and tools over from">
+    <Extra>
+        <Button Primary Icon="IconType.Plus" OnClick="Add">Add Remote Server</Button>
+    </Extra>
+</PageHeader>
+
+<PageContent>
+    <Flex Vertical Gap="Gap.Large">
+        <Typography Secondary>
+            Each sync asks the remote server for the records its filters let through and imports those that are new or have changed there since,
+            through the same export and import as the Export and Import buttons. Archives this server already holds aren't downloaded again.
+            Records deleted on the remote server are kept here, and saves and play sessions never travel.
+            The remote server needs this plugin too, and an access token made there by an administrator.
+        </Typography>
+
+        @if (_editing is { } editing)
+        {
+            <RemoteEditor @key="editing.Id" Remote="editing" IsNew="IsNew(editing)" OnSaved="Saved" OnCancel="Cancel" />
+        }
+
+        @if (Scheduler.Running is { } running)
+        {
+            <Card Title="Syncing" Small>
+                <RunningSync Progress="running" />
+            </Card>
+        }
+
+        <Table TItem="RemoteServer" Items="_remotes" Key="remote => remote.Id" NoPaging Small EmptyText="No remote servers. Add one to sync from it." SettingsKey="plugin-sync-remotes">
+            <Columns>
+                <TemplateColumn TItem="RemoteServer" Title="Name">
+                    <a href="@SyncRoutes.Remote(context.Id)"><Typography Strong>@context.Name</Typography></a>
+                </TemplateColumn>
+                <TemplateColumn TItem="RemoteServer" Title="Address">
+                    <Typography Code>@context.Address</Typography>
+                </TemplateColumn>
+                <TemplateColumn TItem="RemoteServer" Title="Syncs">
+                    @Describe(context)
+                </TemplateColumn>
+                <TemplateColumn TItem="RemoteServer" Title="Schedule" Width="220px">
+                    @if (!context.Enabled)
+                    {
+                        <Typography Secondary>By hand</Typography>
+                    }
+                    else
+                    {
+                        <Flex Vertical>
+                            <span>@SyncSchedules.Describe(context.Schedule)</span>
+                            @if (Jobs.NextSync(context.Id) is { } next)
+                            {
+                                <Typography Secondary Small>Next <LocalTime Value="next" Relative /></Typography>
+                            }
+                        </Flex>
+                    }
+                </TemplateColumn>
+                <TemplateColumn TItem="RemoteServer" Title="Last sync" Width="260px">
+                    @if (Scheduler.Running?.RemoteId == context.Id)
+                    {
+                        <Tag Info>Syncing…</Tag>
+                    }
+                    else if (Scheduler.Pending.Contains(context.Id))
+                    {
+                        <Tag>Waiting</Tag>
+                    }
+                    else if (_latest.TryGetValue(context.Id, out var run))
+                    {
+                        <Flex Gap="Gap.Small" Align="Align.Center">
+                            <RunStatusTag Status="run.Status" Error="@run.Error" />
+                            <LocalTime Value="run.StartedOn" Relative />
+                        </Flex>
+                    }
+                    else
+                    {
+                        <Typography Secondary>Never</Typography>
+                    }
+                </TemplateColumn>
+                <ActionsColumn TItem="RemoteServer">
+                    @if (Scheduler.Running?.RemoteId == context.Id || Scheduler.Pending.Contains(context.Id))
+                    {
+                        <Button Text Small Icon="IconType.Stop" title="Stop" OnClick="() => Scheduler.Cancel(context.Id)" />
+                    }
+                    else
+                    {
+                        <Button Text Small Icon="IconType.ArrowsClockwise" title="Sync now" OnClick="() => SyncNow(context)" />
+                    }
+                    <Button Text Small Icon="IconType.PencilSimple" title="Edit" OnClick="() => Edit(context)" />
+                    <Popconfirm OnConfirm="() => RemoveAsync(context)" Title="@($"Remove {context.Name}?")" Description="It stops syncing, and its sync history is forgotten. Everything already brought over stays." OkText="Remove" Danger>
+                        <Button Text Small Danger Icon="IconType.Trash" title="Remove" />
+                    </Popconfirm>
+                </ActionsColumn>
+            </Columns>
+        </Table>
+
+        <Typography Secondary Small>This server's sync instance id is <Typography Code>@Remotes.InstanceId</Typography>.</Typography>
+    </Flex>
+</PageContent>
+
+@code {
+    IReadOnlyList<RemoteServer> _remotes = [];
+    IReadOnlyDictionary<Guid, SyncRun> _latest = new Dictionary<Guid, SyncRun>();
+
+    RemoteServer? _editing;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    protected override Task OnSyncFinishedAsync(Guid remoteId) => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        _remotes = Remotes.All;
+        _latest = await History.GetLatestRunsAsync();
+    }
+
+    bool IsNew(RemoteServer remote) => _remotes.All(r => r.Id != remote.Id);
+
+    void Add() => _editing = new RemoteServer();
+
+    void Edit(RemoteServer remote) => _editing = remote.Clone();
+
+    void Cancel() => _editing = null;
+
+    async Task Saved()
+    {
+        _editing = null;
+
+        await LoadAsync();
+    }
+
+    void SyncNow(RemoteServer remote)
+    {
+        if (Scheduler.Request(remote.Id))
+            Notifications.Info($"Syncing from {remote.Name}", Scheduler.Running == null ? null : "It starts when the sync that's running finishes.");
+    }
+
+    async Task RemoveAsync(RemoteServer remote)
+    {
+        Scheduler.Cancel(remote.Id);
+        Remotes.Remove(remote.Id);
+
+        try
+        {
+            await History.ForgetAsync(remote.Id);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{remote.Name} was removed, but its sync history couldn't be cleared");
+        }
+
+        Notifications.Success($"{remote.Name} removed");
+
+        await LoadAsync();
+    }
+
+    static string Describe(RemoteServer remote)
+    {
+        var parts = new List<string>();
+
+        parts.Add(remote.Games switch
+        {
+            GameSyncMode.All => "all games",
+            GameSyncMode.Collections => $"games in {remote.CollectionIds.Count} collection(s)",
+            _ => "no games",
+        });
+
+        parts.Add(Dependencies("redistributables", remote.Redistributables));
+        parts.Add(Dependencies("tools", remote.Tools));
+
+        if (remote.IncludeKeys)
+            parts.Add("keys");
+
+        var text = string.Join(", ", parts);
+
+        return char.ToUpper(text[0]) + text[1..];
+    }
+
+    static string Dependencies(string name, DependencySyncMode mode) => mode switch
+    {
+        DependencySyncMode.All => $"all {name}",
+        DependencySyncMode.UsedByGames => $"{name} they use",
+        _ => $"no {name}",
+    };
+}

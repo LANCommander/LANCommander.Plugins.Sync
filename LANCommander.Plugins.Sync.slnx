@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/Configuration/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/LANCommander.Plugins.Sync/LANCommander.Plugins.Sync.csproj" />
+    <Project Path="src/LANCommander.Plugins.Sync.Data/LANCommander.Plugins.Sync.Data.csproj" />
+    <Project Path="src/LANCommander.Plugins.Sync.Migrations.MySql/LANCommander.Plugins.Sync.Migrations.MySql.csproj" />
+    <Project Path="src/LANCommander.Plugins.Sync.Migrations.PostgreSql/LANCommander.Plugins.Sync.Migrations.PostgreSql.csproj" />
+    <Project Path="src/LANCommander.Plugins.Sync.Migrations.Sqlite/LANCommander.Plugins.Sync.Migrations.Sqlite.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LANCommander.Plugins.Sync.Tests/LANCommander.Plugins.Sync.Tests.csproj" />
+  </Folder>
+</Solution>

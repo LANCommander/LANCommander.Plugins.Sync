@@ -1,0 +1,173 @@
+@page "/Plugins/Sync/{RemoteId:guid}"
+@inherits SyncPageBase
+@inject RemoteServers Remotes
+@inject SyncHistory History
+@inject NotificationService Notifications
+
+@if (_remote == null)
+{
+    <PageContent>
+        <Result Title="There is no such remote server" />
+    </PageContent>
+}
+else
+{
+    <PageHeader Title="@_remote.Name" Subtitle="@_remote.Address">
+        <Breadcrumb>
+            <BreadcrumbItem Href="@SyncRoutes.Remotes">Server Sync</BreadcrumbItem>
+            <BreadcrumbItem>@_remote.Name</BreadcrumbItem>
+        </Breadcrumb>
+        <Extra>
+            @if (IsActive)
+            {
+                <Button Icon="IconType.Stop" OnClick="() => Scheduler.Cancel(RemoteId)">Stop</Button>
+            }
+            else
+            {
+                <Button Primary Icon="IconType.ArrowsClockwise" OnClick="SyncNow">Sync Now</Button>
+            }
+            <Popconfirm OnConfirm="ForgetAsync" Title="Forget what was synced?" Description="The next sync checks every record from scratch and imports each one again, archives aside. Nothing already brought over is removed." OkText="Forget" Danger Disabled="IsActive">
+                <Button Disabled="IsActive" Icon="IconType.ArrowCounterClockwise">Sync Everything Again</Button>
+            </Popconfirm>
+        </Extra>
+    </PageHeader>
+
+    <PageContent>
+        <Flex Vertical Gap="Gap.Large">
+            @if (Scheduler.Running is { } running && running.RemoteId == RemoteId)
+            {
+                <Card Title="Syncing" Small>
+                    <RunningSync Progress="running" />
+                </Card>
+            }
+            else if (Scheduler.Pending.Contains(RemoteId))
+            {
+                <Alert Info>Waiting for the sync that's running to finish.</Alert>
+            }
+
+            <Tabs>
+                <Tab Title="Runs">
+                    <Table TItem="SyncRun" Items="_runs" Key="run => run.Id" NoPaging Small EmptyText="It hasn't been synced yet." SettingsKey="plugin-sync-runs">
+                        <Columns>
+                            <TemplateColumn TItem="SyncRun" Title="Started" Width="200px">
+                                <LocalTime Value="context.StartedOn" />
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Trigger" Width="110px">
+                                @(context.Trigger == SyncTrigger.Manual ? "By hand" : "Scheduled")
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Status" Width="190px">
+                                <RunStatusTag Status="context.Status" Error="@context.Error" />
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Checked" Width="90px">@context.Checked</TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Changed" Width="90px">@context.Changed</TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Imported" Width="90px">@context.Imported</TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Failed" Width="80px">
+                                <Typography Danger="context.Failed > 0">@context.Failed</Typography>
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Downloaded" Width="120px">
+                                <ByteSize Value="context.Downloaded" />
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Took" Width="100px">
+                                @Duration(context)
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncRun" Title="Error">
+                                <Typography Danger Small>@context.Error</Typography>
+                            </TemplateColumn>
+                        </Columns>
+                    </Table>
+                </Tab>
+                <Tab Title="@($"Records ({_records.Count})")">
+                    <Table TItem="SyncedRecord" Items="_records" Key="record => record.Id" Small Searchable SearchText="record => record.Name" EmptyText="Nothing has been brought over yet." SettingsKey="plugin-sync-records">
+                        <Columns>
+                            <TemplateColumn TItem="SyncedRecord" Title="Type" Width="140px">
+                                @context.RecordType
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncedRecord" Title="Name">
+                                <Typography Strong>@context.Name</Typography>
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncedRecord" Title="Synced" Width="200px">
+                                @if (context.SyncedOn is { } synced)
+                                {
+                                    <LocalTime Value="synced" />
+                                }
+                                else
+                                {
+                                    <Typography Secondary>Never</Typography>
+                                }
+                            </TemplateColumn>
+                            <TemplateColumn TItem="SyncedRecord" Title="Last attempt">
+                                @if (context.LastError != null)
+                                {
+                                    <Typography Danger Small>@context.LastError</Typography>
+                                }
+                                else
+                                {
+                                    <Tag Success>Up to date</Tag>
+                                }
+                            </TemplateColumn>
+                        </Columns>
+                    </Table>
+                </Tab>
+            </Tabs>
+        </Flex>
+    </PageContent>
+}
+
+@code {
+    [Parameter] public Guid RemoteId { get; set; }
+
+    RemoteServer? _remote;
+    IReadOnlyList<SyncRun> _runs = [];
+    IReadOnlyList<SyncedRecord> _records = [];
+
+    bool IsActive => Scheduler.Running?.RemoteId == RemoteId || Scheduler.Pending.Contains(RemoteId);
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    protected override Task OnSyncFinishedAsync(Guid remoteId) => remoteId == RemoteId ? LoadAsync() : Task.CompletedTask;
+
+    async Task LoadAsync()
+    {
+        _remote = Remotes.Find(RemoteId);
+
+        if (_remote == null)
+            return;
+
+        _runs = await History.GetRunsAsync(RemoteId);
+        _records = await History.GetRecordsAsync(RemoteId);
+    }
+
+    void SyncNow()
+    {
+        if (_remote != null && Scheduler.Request(RemoteId))
+            Notifications.Info($"Syncing from {_remote.Name}", Scheduler.Running == null ? null : "It starts when the sync that's running finishes.");
+    }
+
+    async Task ForgetAsync()
+    {
+        try
+        {
+            await History.ForgetAsync(RemoteId);
+
+            Notifications.Success("Forgotten; the next sync checks everything again");
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The sync history couldn't be cleared");
+        }
+    }
+
+    static string Duration(SyncRun run)
+    {
+        if (run.FinishedOn is not { } finished)
+            return "";
+
+        var took = finished - run.StartedOn;
+
+        return took.TotalHours >= 1 ? $"{(int)took.TotalHours}h {took.Minutes}m"
+            : took.TotalMinutes >= 1 ? $"{(int)took.TotalMinutes}m {took.Seconds}s"
+            : $"{Math.Max(0, took.Seconds)}s";
+    }
+}

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The plugin's database context and entities. They're kept apart from the plugin so the migrations
+    projects, one per engine, can reference them while the plugin references the migrations: a
+    migrations project that referenced the plugin itself would make a cycle.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="LANCommander.Server.Plugins" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LANCommander.Plugins.Sync" />
+    <InternalsVisibleTo Include="LANCommander.Plugins.Sync.Tests" />
+  </ItemGroup>
+
+</Project>

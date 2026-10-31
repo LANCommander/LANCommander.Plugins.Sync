@@ -1,0 +1,47 @@
+@* The sync that's running: its stage, how many records are done, and the download in progress *@
+<Flex Vertical Gap="Gap.Small">
+    <Typography>
+        @switch (Progress.Stage)
+        {
+            case SyncStage.Connecting:
+                @:Connecting to @Progress.RemoteName…
+                break;
+            case SyncStage.ReadingCatalog:
+                @:Asking @Progress.RemoteName what has changed…
+                break;
+            default:
+                @:@Progress.Done of @Progress.Total changed record(s) synced from @Progress.RemoteName
+                @if (Progress.Failed > 0)
+                {
+                    <Typography Danger> (@Progress.Failed failed)</Typography>
+                }
+                break;
+        }
+    </Typography>
+
+    @if (Progress.Stage == SyncStage.Importing && Progress.Total > 0)
+    {
+        <Progress Value="Percent(Progress.Done, Progress.Total)" Small />
+    }
+    else
+    {
+        <Progress Indeterminate Small />
+    }
+
+    @if (Progress.Current != null)
+    {
+        <Typography Secondary Small>
+            @Progress.Current: <ByteSize Value="Progress.CurrentDownloaded" />
+            @if (Progress.CurrentLength is { } length)
+            {
+                <text> of </text><ByteSize Value="length" />
+            }
+        </Typography>
+    }
+</Flex>
+
+@code {
+    [Parameter, EditorRequired] public SyncProgress Progress { get; set; } = default!;
+
+    static double Percent(long done, long total) => total <= 0 ? 0 : Math.Round(100.0 * done / total, 1);
+}

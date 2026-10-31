@@ -1,0 +1,238 @@
+@inject RemoteServers Remotes
+@inject RemoteClient Client
+@inject IStorageLocationProvider StorageLocations
+@inject NotificationService Notifications
+
+<Card Title="@(IsNew ? "Add a remote server" : $"Edit {Remote.Name}")">
+    <Form Model="Remote" OnSubmit="SaveAsync">
+        <FormItem Label="Name" Required>
+            <TextInput @bind-Value="Remote.Name" AutoFocus />
+        </FormItem>
+        <FormItem Label="Address" Required Help="The address its launchers connect to, e.g. http://lancommander-hq:1337" Class="edit-form-mono">
+            <TextInput @bind-Value="Remote.Address" Placeholder="http://lancommander-hq:1337" />
+        </FormItem>
+        <FormItem Label="Access token" Required Help="Made on the remote server by an administrator: Access Tokens in the profile menu, allowed the Server Sync plugin">
+            <PasswordInput @bind-Value="Remote.AccessToken" />
+        </FormItem>
+
+        @if (_testResult != null)
+        {
+            <Alert Success="_testSucceeded" Danger="!_testSucceeded">@_testResult</Alert>
+        }
+
+        <FormItem Label="Games">
+            <EnumSelect TEnum="GameSyncMode" @bind-Value="Remote.Games" />
+        </FormItem>
+
+        @if (Remote.Games == GameSyncMode.Collections)
+        {
+            <FormItem Label="Collections" Required HelpTemplate="CollectionsHelp">
+                <Select TValue="Guid" Multiple Searchable Items="CollectionChoices" Values="Remote.CollectionIds" ValuesChanged="values => Remote.CollectionIds = values.ToList()" ValuesExpression="() => Remote.CollectionIds" Placeholder="@(_collectionsLoading ? "Loading collections…" : "Choose collections on the remote server")" />
+            </FormItem>
+        }
+
+        <FormItem Label="Redistributables">
+            <EnumSelect TEnum="DependencySyncMode" @bind-Value="Remote.Redistributables" />
+        </FormItem>
+        <FormItem Label="Tools">
+            <EnumSelect TEnum="DependencySyncMode" @bind-Value="Remote.Tools" />
+        </FormItem>
+        <FormItem Label="Keys" Help="Games' keys come with them. Leave this off when keys are licensed to one site.">
+            <Switch @bind-Value="Remote.IncludeKeys" />
+        </FormItem>
+        <FormItem Label="Archive storage" Help="Where archives brought over from this server are stored">
+            <Select TValue="Guid?" Items="StorageChoices" @bind-Value="Remote.StorageLocationId" />
+        </FormItem>
+        <FormItem Label="Sync automatically" Help="Off, it only syncs when asked to">
+            <Switch @bind-Value="Remote.Enabled" />
+        </FormItem>
+
+        @if (Remote.Enabled)
+        {
+            <FormItem Label="Schedule">
+                <Select TValue="string" Items="ScheduleChoices" Value="SchedulePreset" ValueChanged="ChooseSchedule" />
+            </FormItem>
+
+            @if (SchedulePreset == CustomSchedule)
+            {
+                <FormItem Label="Cron expression" Required Help="Minute, hour, day of month, month and day of week, in the server's time zone; e.g. 30 1 * * 1-5 for 1:30 AM on weekdays" Class="edit-form-mono">
+                    <TextInput @bind-Value="Remote.Schedule" Placeholder="@SyncSchedules.Hourly" />
+                </FormItem>
+            }
+        }
+
+        <FormItem>
+            <Flex Gap="Gap.Small">
+                <Button Primary Submit>Save</Button>
+                <Button Loading="_testing" OnClick="TestAsync">Test Connection</Button>
+                <Button Text OnClick="OnCancel">Cancel</Button>
+            </Flex>
+        </FormItem>
+    </Form>
+</Card>
+
+@code {
+    /// <summary>A copy of the remote server to edit; saved only when the form is.</summary>
+    [Parameter, EditorRequired] public RemoteServer Remote { get; set; } = default!;
+
+    [Parameter] public bool IsNew { get; set; }
+
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    IReadOnlyList<CollectionInfo>? _collections;
+    IReadOnlyList<SelectItem<Guid?>> _storageChoices = [];
+    bool _collectionsLoading;
+    bool _testing;
+    bool _testSucceeded;
+    string? _testResult;
+
+    /// <summary>The remote server's collections, plus any chosen before that it no longer has.</summary>
+    IEnumerable<SelectItem<Guid>> CollectionChoices =>
+        (_collections ?? [])
+            .Select(c => new SelectItem<Guid>(c.Id, c.Name))
+            .Concat(Remote.CollectionIds
+                .Where(id => _collections == null || _collections.All(c => c.Id != id))
+                .Select(id => new SelectItem<Guid>(id, _collections == null ? $"Collection {id}" : $"Missing collection {id}")));
+
+    IEnumerable<SelectItem<Guid?>> StorageChoices => _storageChoices;
+
+    const string CustomSchedule = "";
+
+    static readonly IReadOnlyList<SelectItem<string>> ScheduleChoices = SyncSchedules.Presets
+        .Select(p => new SelectItem<string>(p.Cron, p.Label))
+        .Append(new SelectItem<string>(CustomSchedule, "Custom…"))
+        .ToList();
+
+    bool _customSchedule;
+
+    /// <summary>The preset the schedule is, or <see cref="CustomSchedule"/>.</summary>
+    string SchedulePreset => !_customSchedule && SyncSchedules.Presets.Any(p => p.Cron == Remote.Schedule.Trim())
+        ? Remote.Schedule.Trim()
+        : CustomSchedule;
+
+    void ChooseSchedule(string cron)
+    {
+        _customSchedule = cron == CustomSchedule;
+
+        if (!_customSchedule)
+            Remote.Schedule = cron;
+    }
+
+    RenderFragment CollectionsHelp => @<span>
+        Games in any of these on the remote server, with their add-ons and base games.
+        @if (_collections == null && !_collectionsLoading)
+        {
+            <Button Link Small OnClick="LoadCollectionsAsync">Load collections</Button>
+        }
+    </span>;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var locations = await StorageLocations.GetAsync(StorageLocationType.Archive);
+
+        _storageChoices = locations
+            .Select(l => new SelectItem<Guid?>(l.Id, l.Default ? $"{l.Path} (default)" : l.Path))
+            .Prepend(new SelectItem<Guid?>(null, "The default location"))
+            .ToList();
+
+        if (!IsNew)
+            _ = LoadCollectionsAsync();
+    }
+
+    async Task LoadCollectionsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Remote.Address) || string.IsNullOrWhiteSpace(Remote.AccessToken))
+            return;
+
+        _collectionsLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+            _collections = await Client.GetCollectionsAsync(WithDefaults(Remote), timeout.Token);
+        }
+        catch (Exception ex)
+        {
+            _testResult = ex is OperationCanceledException ? "The server didn't answer in time." : ex.Message;
+            _testSucceeded = false;
+        }
+        finally
+        {
+            _collectionsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task TestAsync()
+    {
+        _testing = true;
+        _testResult = null;
+
+        try
+        {
+            var probe = WithDefaults(Remote);
+
+            RemoteServers.Validate(probe);
+
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+            var info = await Client.GetInfoAsync(probe, timeout.Token);
+
+            if (info.InstanceId == Remotes.InstanceId)
+            {
+                _testResult = "That's this server.";
+                _testSucceeded = false;
+            }
+            else
+            {
+                _collections = await Client.GetCollectionsAsync(probe, timeout.Token);
+                _testResult = $"Connected to Server Sync {info.PluginVersion}, with {_collections.Count} collection(s).";
+                _testSucceeded = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _testResult = ex is OperationCanceledException ? "The server didn't answer in time." : ex.Message;
+            _testSucceeded = false;
+        }
+        finally
+        {
+            _testing = false;
+        }
+    }
+
+    async Task SaveAsync()
+    {
+        try
+        {
+            Remotes.Save(Remote);
+
+            Notifications.Success($"{Remote.Name} saved");
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The remote server could not be saved");
+        }
+    }
+
+    /// <summary>
+    /// The remote server as far as testing it goes: a connection doesn't need a name or collections
+    /// yet.
+    /// </summary>
+    static RemoteServer WithDefaults(RemoteServer remote)
+    {
+        var copy = remote.Clone();
+
+        copy.Name = string.IsNullOrWhiteSpace(copy.Name) ? "The server" : copy.Name;
+        copy.Games = GameSyncMode.All;
+        copy.Schedule = SyncSchedules.Hourly;
+
+        return copy;
+    }
+}

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The plugin's MySql migrations, shipped in its folder. Generated with dotnet ef migrations add,
+    run in this folder with this project as both project and startup project; see the README.
+  -->
+
+  <ItemGroup>
+    <!-- With its runtime assets, so dotnet ef can load the context; the plugin build strips it from the drop-in folder -->
+    <PackageReference Include="LANCommander.Server.Plugins" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" PrivateAssets="all" />
+    <!-- Lifts EF's design-time Roslyn to the version the server pins -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Plugins.Sync.Data\LANCommander.Plugins.Sync.Data.csproj" />
+  </ItemGroup>
+
+</Project>
