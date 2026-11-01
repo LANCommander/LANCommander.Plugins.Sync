@@ -86,7 +86,7 @@ public enum DependencySyncMode
 {
     [Display(Name = "None")]
     None,
-    [Display(Name = "Those the synced games use")]
+    [Display(Name = "Only Used By Games")]
     UsedByGames,
     [Display(Name = "All")]
     All,

@@ -8,10 +8,10 @@
         <FormItem Label="Name" Required>
             <TextInput @bind-Value="Remote.Name" AutoFocus />
         </FormItem>
-        <FormItem Label="Address" Required Help="The address its launchers connect to, e.g. http://lancommander-hq:1337" Class="edit-form-mono">
-            <TextInput @bind-Value="Remote.Address" Placeholder="http://lancommander-hq:1337" />
+        <FormItem Label="Address" Required Help="The remote server address" Class="edit-form-mono">
+            <TextInput @bind-Value="Remote.Address" Placeholder="http://lancommander:1337" />
         </FormItem>
-        <FormItem Label="Access token" Required Help="Made on the remote server by an administrator: Access Tokens in the profile menu, allowed the Server Sync plugin">
+        <FormItem Label="Access token" Required Help="Access token created on the remost server by an administrator.">
             <PasswordInput @bind-Value="Remote.AccessToken" NewPassword Placeholder="lc_pat_…" />
         </FormItem>
 
@@ -37,13 +37,13 @@
         <FormItem Label="Tools">
             <EnumSelect TEnum="DependencySyncMode" @bind-Value="Remote.Tools" />
         </FormItem>
-        <FormItem Label="Keys" Help="Games' keys come with them. Leave this off when keys are licensed to one site.">
+        <FormItem Label="Keys" Help="Include any game keys with the sync.">
             <Switch @bind-Value="Remote.IncludeKeys" />
         </FormItem>
-        <FormItem Label="Archive storage" Help="Where archives brought over from this server are stored">
+        <FormItem Label="Archive storage" Help="Where synced archives are stored.">
             <Select TValue="Guid?" Items="StorageChoices" @bind-Value="Remote.StorageLocationId" />
         </FormItem>
-        <FormItem Label="Sync automatically" Help="Off, it only syncs when asked to">
+        <FormItem Label="Sync automatically" Help="Run the sync on an automatic schedule.">
             <Switch @bind-Value="Remote.Enabled" />
         </FormItem>
 
@@ -121,7 +121,7 @@
     }
 
     RenderFragment CollectionsHelp => @<span>
-        Games in any of these on the remote server, with their add-ons and base games.
+        Sync any games from the remote server that belong to the selected collections.
         @if (_collections == null && !_collectionsLoading)
         {
             <Button Link Small OnClick="LoadCollectionsAsync">Load collections</Button>
