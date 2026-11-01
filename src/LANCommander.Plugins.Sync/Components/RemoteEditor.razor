@@ -12,7 +12,7 @@
             <TextInput @bind-Value="Remote.Address" Placeholder="http://lancommander-hq:1337" />
         </FormItem>
         <FormItem Label="Access token" Required Help="Made on the remote server by an administrator: Access Tokens in the profile menu, allowed the Server Sync plugin">
-            <PasswordInput @bind-Value="Remote.AccessToken" />
+            <PasswordInput @bind-Value="Remote.AccessToken" NewPassword Placeholder="lc_pat_…" />
         </FormItem>
 
         @if (_testResult != null)
