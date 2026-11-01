@@ -92,7 +92,10 @@ public sealed class SyncPlugin : IPlugin
         {
             client.Timeout = Timeout.InfiniteTimeSpan;
             client.DefaultRequestHeaders.UserAgent.ParseAdd($"LANCommander-Sync/{PluginVersion}");
-        });
+        })
+        // A server that doesn't accept the token redirects to its login page; following that would turn
+        // the refusal into a 200 with a page of HTML
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
     }
 
     private sealed class SyncRouteAssembly : IServerRouteAssemblyExtension
@@ -106,8 +109,8 @@ public sealed class SyncPlugin : IPlugin
         public string Label => "Server Sync";
         public string Href => SyncRoutes.Remotes;
         public string? Icon => "ArrowsClockwise";
-        public string? Section => ServerNavigationSection.Settings;
-        public string? After => "/Settings/Plugins";
+        public string? Section => ServerNavigationSection.Main;
+        public string? After => "/Files";
     }
 }
 

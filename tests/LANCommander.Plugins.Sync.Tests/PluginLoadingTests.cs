@@ -61,7 +61,7 @@ public sealed class PluginLoadingTests : IDisposable
             .Single();
 
         Assert.Equal(SyncRoutes.Remotes, navigation.Href);
-        Assert.Equal(ServerNavigationSection.Settings, navigation.Section);
+        Assert.Equal(ServerNavigationSection.Main, navigation.Section);
 
         var routes = (IServerRouteAssemblyExtension)services
             .Single(service => service.ServiceType == typeof(IServerRouteAssemblyExtension)).ImplementationInstance!;
