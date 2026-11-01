@@ -72,6 +72,9 @@ public sealed class RemoteServers(IPluginSettings<SyncSettings> settings, IRecur
     }
 
     /// <summary>The address without a trailing slash, which every request path is added to.</summary>
+    /// <summary>What the host's personal access tokens start with.</summary>
+    public const string AccessTokenPrefix = "lc_pat_";
+
     public static string NormalizeAddress(string address) => address.Trim().TrimEnd('/');
 
     internal static void Validate(RemoteServer remote)
@@ -84,6 +87,11 @@ public sealed class RemoteServers(IPluginSettings<SyncSettings> settings, IRecur
 
         if (string.IsNullOrWhiteSpace(remote.AccessToken))
             throw new ArgumentException("A remote server needs an access token, made on that server under Access Tokens in the profile menu.", nameof(remote));
+
+        // Catches a browser filling a saved password into the field, which the remote would otherwise
+        // turn away with nothing more than a redirect to its login page
+        if (!remote.AccessToken.Trim().StartsWith(AccessTokenPrefix, StringComparison.Ordinal))
+            throw new ArgumentException($"That isn't an access token: they start with {AccessTokenPrefix}. Make one on the remote server under Access Tokens in the profile menu.", nameof(remote));
 
         if (string.IsNullOrWhiteSpace(remote.Schedule))
             throw new ArgumentException("A remote server needs a schedule, even if it's only synced by hand.", nameof(remote));

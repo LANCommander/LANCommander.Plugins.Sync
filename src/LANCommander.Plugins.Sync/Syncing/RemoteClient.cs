@@ -80,7 +80,8 @@ public sealed class RemoteClient(IHttpClientFactory clientFactory)
 
             throw new RemoteServerException(response.StatusCode switch
             {
-                HttpStatusCode.Unauthorized => $"{remote.Name} didn't accept the access token. It may have expired or been revoked; make a new one there.",
+                HttpStatusCode.Unauthorized or HttpStatusCode.Redirect or HttpStatusCode.RedirectKeepVerb or HttpStatusCode.TemporaryRedirect
+                    => $"{remote.Name} didn't accept the access token. It may have expired or been revoked; make a new one there.",
                 HttpStatusCode.Forbidden => $"{remote.Name} turned the access token away. It must belong to an administrator and be allowed the Sync plugin.",
                 HttpStatusCode.NotFound when path == SyncProtocol.InfoPath => $"{remote.Name} doesn't have the Sync plugin installed, or isn't a LANCommander server.",
                 _ => $"{remote.Name} answered {(int)response.StatusCode} {response.ReasonPhrase}{(detail == null ? "" : $": {detail}")}",
