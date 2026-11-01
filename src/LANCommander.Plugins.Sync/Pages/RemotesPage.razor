@@ -5,7 +5,7 @@
 @inject SyncJobs Jobs
 @inject NotificationService Notifications
 
-<PageHeader Title="Server Sync" Subtitle="The LANCommander servers this one brings games, redistributables and tools over from">
+<PageHeader Title="Server Sync" Subtitle="Sync games, redistributables, and tools with other servers">
     <Extra>
         <Button Primary Icon="IconType.Plus" OnClick="Add">Add Remote Server</Button>
     </Extra>
@@ -13,13 +13,6 @@
 
 <PageContent>
     <Flex Vertical Gap="Gap.Large">
-        <Typography Secondary>
-            Each sync asks the remote server for the records its filters let through and imports those that are new or have changed there since,
-            through the same export and import as the Export and Import buttons. Archives this server already holds aren't downloaded again.
-            Records deleted on the remote server are kept here, and saves and play sessions never travel.
-            The remote server needs this plugin too, and an access token made there by an administrator.
-        </Typography>
-
         @if (_editing is { } editing)
         {
             <RemoteEditor @key="editing.Id" Remote="editing" IsNew="IsNew(editing)" OnSaved="Saved" OnCancel="Cancel" />
@@ -32,7 +25,7 @@
             </Card>
         }
 
-        <Table TItem="RemoteServer" Items="_remotes" Key="remote => remote.Id" NoPaging Small EmptyText="No remote servers. Add one to sync from it." SettingsKey="plugin-sync-remotes">
+        <Table TItem="RemoteServer" Items="_remotes" Key="remote => remote.Id" NoPaging Small EmptyText="No remote servers have been set up yet." SettingsKey="plugin-sync-remotes">
             <Columns>
                 <TemplateColumn TItem="RemoteServer" Title="Name">
                     <a href="@SyncRoutes.Remote(context.Id)"><Typography Strong>@context.Name</Typography></a>
@@ -90,14 +83,14 @@
                         <Button Text Small Icon="IconType.ArrowsClockwise" title="Sync now" OnClick="() => SyncNow(context)" />
                     }
                     <Button Text Small Icon="IconType.PencilSimple" title="Edit" OnClick="() => Edit(context)" />
-                    <Popconfirm OnConfirm="() => RemoveAsync(context)" Title="@($"Remove {context.Name}?")" Description="It stops syncing, and its sync history is forgotten. Everything already brought over stays." OkText="Remove" Danger>
+                    <Popconfirm OnConfirm="() => RemoveAsync(context)" Title="@($"Remove {context.Name}?")" OkText="Remove" Danger>
                         <Button Text Small Danger Icon="IconType.Trash" title="Remove" />
                     </Popconfirm>
                 </ActionsColumn>
             </Columns>
         </Table>
 
-        <Typography Secondary Small>This server's sync instance id is <Typography Code>@Remotes.InstanceId</Typography>.</Typography>
+        <Typography Secondary Small>This server's sync ID is <Typography Code>@Remotes.InstanceId</Typography>.</Typography>
     </Flex>
 </PageContent>
 

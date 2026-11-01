@@ -42,7 +42,7 @@ else
             }
             else if (Scheduler.Pending.Contains(RemoteId))
             {
-                <Alert Info>Waiting for the sync that's running to finish.</Alert>
+                <Alert Info>Waiting for sync to finish.</Alert>
             }
 
             <Tabs>
@@ -53,7 +53,7 @@ else
                                 <LocalTime Value="context.StartedOn" />
                             </TemplateColumn>
                             <TemplateColumn TItem="SyncRun" Title="Trigger" Width="110px">
-                                @(context.Trigger == SyncTrigger.Manual ? "By hand" : "Scheduled")
+                                @(context.Trigger == SyncTrigger.Manual ? "Manual" : "Scheduled")
                             </TemplateColumn>
                             <TemplateColumn TItem="SyncRun" Title="Status" Width="190px">
                                 <RunStatusTag Status="context.Status" Error="@context.Error" />
@@ -149,13 +149,13 @@ else
         {
             await History.ForgetAsync(RemoteId);
 
-            Notifications.Success("Forgotten; the next sync checks everything again");
+            Notifications.Success("History cleared");
 
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            Notifications.Error(ex, "The sync history couldn't be cleared");
+            Notifications.Error(ex, "The sync history could not be cleared");
         }
     }
 
