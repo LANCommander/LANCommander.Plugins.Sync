@@ -7,7 +7,7 @@
       To build against an unreleased server, pack its SDK, Server.Plugins and Server.UI projects into
       artifacts/packages and pass -p:LANCommanderVersion=<version>; see the README.
     -->
-    <LANCommanderVersion Condition="'$(LANCommanderVersion)' == ''">2.2.0-beta.1</LANCommanderVersion>
+    <LANCommanderVersion Condition="'$(LANCommanderVersion)' == ''">2.2.0-rc.3</LANCommanderVersion>
   </PropertyGroup>
   <ItemGroup Label="Host">
     <PackageVersion Include="LANCommander.SDK" Version="$(LANCommanderVersion)" />
