@@ -190,7 +190,7 @@
             else
             {
                 _collections = await Client.GetCollectionsAsync(probe, timeout.Token);
-                _testResult = $"Connected to Server Sync {info.PluginVersion}, with {_collections.Count} collection(s).";
+                _testResult = $"Connected to Sync {info.PluginVersion}, with {_collections.Count} collection(s).";
                 _testSucceeded = true;
             }
         }

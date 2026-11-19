@@ -13,9 +13,9 @@ keep their ids, so a record synced again updates the copy it made the first time
 
 1. Install the plugin from **Settings → Plugins** on every server taking part, and restart them.
 2. On the remote server, an administrator makes an access token under **Access Tokens** in the profile
-   menu, allowed the **Server Sync** plugin. Tokens belong to their maker, so it must be an
+   menu, allowed the **Sync** plugin. Tokens belong to their maker, so it must be an
    administrator's.
-3. On the server that syncs, add the remote server under **Settings → Server Sync**: its address, the
+3. On the server that syncs, add the remote server under the top-level **Sync** page: its address, the
    token, and what to sync. **Test Connection** checks the token and loads the remote server's
    collections.
 4. Save. A remote server that syncs automatically does so on its schedule; any of them can be synced
@@ -56,7 +56,7 @@ game's description doesn't download its files again.
 
 ### Servers syncing from each other
 
-Every server has a sync instance id, shown at the foot of the Server Sync page. A server remembers the
+Every server has a sync instance id, shown at the foot of the Sync page. A server remembers the
 origin of everything it imports, and passes it on, so a record never comes back to the server it
 started on unless it was changed somewhere in between. Two servers can sync from each other, or several
 in a ring, without passing the same change around forever. A server copied from another has the same
@@ -79,7 +79,7 @@ them and restart it.
 
 ## How it works
 
-Server Sync adds four endpoints to every server it's installed on, under `/api/Plugins/Sync`, all for
+Sync adds four endpoints to every server it's installed on, under `/api/Plugins/Sync`, all for
 administrators only:
 
 | Endpoint | Answers |

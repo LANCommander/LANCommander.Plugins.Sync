@@ -28,7 +28,7 @@ namespace LANCommander.Plugins.Sync;
 
 /// <summary>
 /// Syncs games, redistributables and tools between LANCommander servers. Each server lists the remote
-/// servers it brings records over from, under Settings → Server Sync, and serves its own records to
+/// servers it brings records over from, under the top-level Sync page, and serves its own records to
 /// the servers that list it.
 /// </summary>
 public sealed class SyncPlugin : IPlugin
@@ -38,7 +38,7 @@ public sealed class SyncPlugin : IPlugin
     public static string PluginVersion => typeof(SyncPlugin).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
     public string Id => PluginId;
-    public string Name => "Server Sync";
+    public string Name => "Sync";
     public string Version => PluginVersion;
     public string Author => "LANCommander";
 
@@ -61,7 +61,7 @@ public sealed class SyncPlugin : IPlugin
         var remotes = context.Services.GetRequiredService<RemoteServers>();
 
         context.Logger.LogInformation(
-            "Server Sync is instance {InstanceId} and syncs from {Count} remote server(s)",
+            "Sync is instance {InstanceId} and syncs from {Count} remote server(s)",
             remotes.InstanceId,
             remotes.All.Count);
 
@@ -106,7 +106,7 @@ public sealed class SyncPlugin : IPlugin
     private sealed class SyncNavigation : IServerNavigationExtension
     {
         public string Id => $"{PluginId}.remotes";
-        public string Label => "Server Sync";
+        public string Label => "Sync";
         public string Href => SyncRoutes.Remotes;
         public string? Icon => "ArrowsClockwise";
         public string? Section => ServerNavigationSection.Main;

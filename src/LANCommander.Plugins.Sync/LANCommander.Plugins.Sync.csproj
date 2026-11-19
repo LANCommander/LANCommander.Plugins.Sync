@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Description>Syncs games, redistributables and tools between LANCommander servers. Each server pulls the records that changed on the servers it lists, filtered by collection, through the export and import every server already has.</Description>
-    <Title>Server Sync</Title>
+    <Title>Sync</Title>
     <Version>0.1.0</Version>
     <PackageTags>lancommander;lancommander-plugin;sync;replication;import-export</PackageTags>
     <!-- An unresolved component tag silently renders as a raw HTML element; fail the build instead -->
